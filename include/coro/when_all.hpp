@@ -275,7 +275,10 @@ public:
         return completion_notifier{};
     }
 
-    auto unhandled_exception() noexcept { m_exception_ptr = std::current_exception(); }
+    auto unhandled_exception() noexcept { 
+        exception_has_occurred = true;
+        // m_exception_ptr = std::current_exception(); 
+        }
 
     auto yield_value(return_type&& value) noexcept
     {
@@ -291,18 +294,24 @@ public:
 
     auto result() & -> return_type&
     {
-        if (m_exception_ptr)
+        if (exception_has_occurred
+        //m_exception_ptr
+        )
         {
-            std::rethrow_exception(m_exception_ptr);
+            // std::rethrow_exception(m_exception_ptr);
+            throw std::bad_exception();        
         }
         return *m_return_value;
     }
 
     auto result() && -> return_type&&
     {
-        if (m_exception_ptr)
+        if (exception_has_occurred
+        //m_exception_ptr
+        )
         {
-            std::rethrow_exception(m_exception_ptr);
+            // std::rethrow_exception(m_exception_ptr);
+            throw std::bad_exception();        
         }
         return std::forward(*m_return_value);
     }
@@ -317,7 +326,8 @@ public:
 
 private:
     when_all_latch*                 m_latch{nullptr};
-    std::exception_ptr              m_exception_ptr;
+    // rpc::exception_ptr m_exception_ptr{nullptr};
+    bool exception_has_occurred{false};
     std::add_pointer_t<return_type> m_return_value;
 };
 
@@ -348,15 +358,20 @@ public:
         return completion_notifier{};
     }
 
-    auto unhandled_exception() noexcept -> void { m_exception_ptr = std::current_exception(); }
+    auto unhandled_exception() noexcept -> void { exception_has_occurred = true;
+        // m_exception_ptr = std::current_exception();
+         }
 
     auto return_void() noexcept -> void {}
 
     auto result() -> void
     {
-        if (m_exception_ptr)
+        if (exception_has_occurred
+        //m_exception_ptr
+        )
         {
-            std::rethrow_exception(m_exception_ptr);
+            // std::rethrow_exception(m_exception_ptr);
+            throw std::bad_exception();        
         }
     }
 
@@ -368,7 +383,8 @@ public:
 
 private:
     when_all_latch*    m_latch{nullptr};
-    std::exception_ptr m_exception_ptr;
+    // rpc::exception_ptr m_exception_ptr{nullptr};
+    bool exception_has_occurred{false};
 };
 
 template<typename return_type>
@@ -476,8 +492,8 @@ template<concepts::awaitable... awaitables_type>
 }
 
 template<
-    std::ranges::range  range_type,
-    concepts::awaitable awaitable_type = std::ranges::range_value_t<range_type>,
+    ranges::range  range_type,
+    concepts::awaitable awaitable_type = ranges::range_value_t<range_type>,
     typename return_type               = typename concepts::awaitable_traits<awaitable_type>::awaiter_return_type>
 [[nodiscard]] auto when_all(range_type awaitables)
     -> detail::when_all_ready_awaitable<std::vector<detail::when_all_task<return_type>>>
@@ -485,7 +501,7 @@ template<
     std::vector<detail::when_all_task<return_type>> output_tasks;
 
     // If the size is known in constant time reserve the output tasks size.
-    if constexpr (std::ranges::sized_range<range_type>)
+    if constexpr (ranges::sized_range<range_type>)
     {
         output_tasks.reserve(std::size(awaitables));
     }

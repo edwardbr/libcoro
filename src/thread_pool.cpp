@@ -18,11 +18,12 @@ auto thread_pool::operation::await_suspend(std::coroutine_handle<> awaiting_coro
 
 thread_pool::thread_pool(options opts) : m_opts(std::move(opts))
 {
-    m_threads.reserve(m_opts.thread_count);
+    m_threads.resize(m_opts.thread_count);
 
     for (uint32_t i = 0; i < m_opts.thread_count; ++i)
     {
-        m_threads.emplace_back([this, i]() { executor(i); });
+        m_threads[i] = std::make_shared<thread_proxy>();
+        m_threads[i]->start([this, i]() { executor(i); });
     }
 }
 
@@ -77,9 +78,9 @@ auto thread_pool::shutdown() noexcept -> void
 
         for (auto& thread : m_threads)
         {
-            if (thread.joinable())
+            if (thread->joinable())
             {
-                thread.join();
+                thread->join();
             }
         }
     }

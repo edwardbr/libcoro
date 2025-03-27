@@ -48,7 +48,7 @@ TEST_CASE("generator satisfies view concept for compatibility with std::views::t
             co_yield ++n;
     };
     auto nat = natural();
-    static_assert(std::ranges::view<decltype(nat)>, "does not satisfy view concept");
+    static_assert(ranges::view<decltype(nat)>, "does not satisfy view concept");
     SECTION("Count the items")
     {
         for (auto&& n : natural() | std::views::take(5))
@@ -58,7 +58,7 @@ TEST_CASE("generator satisfies view concept for compatibility with std::views::t
         }
         REQUIRE(counter == 5);
     }
-    SECTION("Not supported when std::ranges::view is satisfied, see issue 261")
+    SECTION("Not supported when ranges::view is satisfied, see issue 261")
     {
         /// the following may fail to compile to prevent loss of items in the std::views:take:
         /*

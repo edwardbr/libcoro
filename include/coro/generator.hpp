@@ -41,7 +41,10 @@ public:
         return std::suspend_always{};
     }
 
-    auto unhandled_exception() -> void { m_exception = std::current_exception(); }
+    auto unhandled_exception() -> void { 
+        exception_has_occurred = true;
+        // m_exception = std::current_exception(); 
+        }
 
     auto return_void() noexcept -> void {}
 
@@ -52,15 +55,21 @@ public:
 
     auto rethrow_if_exception() -> void
     {
-        if (m_exception)
+        if (exception_has_occurred
+        //m_exception
+        )
         {
-            std::rethrow_exception(m_exception);
+            exception_has_occurred = true;
+            throw std::bad_exception();
+            
+            // std::rethrow_exception(m_exception);
         }
     }
 
 private:
     pointer_type       m_value{nullptr};
-    std::exception_ptr m_exception;
+    // rpc::exception_ptr m_exception;
+    bool exception_has_occurred{false};
 };
 
 struct generator_sentinel
@@ -118,7 +127,7 @@ private:
 } // namespace detail
 
 template<typename T>
-class generator : public std::ranges::view_base
+class generator : public ranges::view_base
 {
 public:
     using promise_type = detail::generator_promise<T>;

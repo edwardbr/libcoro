@@ -6,11 +6,17 @@
 
 namespace coro::concepts
 {
+    
+  /// [concept.convertible], concept convertible_to
+  template<typename _From, typename _To>
+    concept convertible_to = std::is_convertible_v<_From, _To>
+      && requires { static_cast<_To>(std::declval<_From>()); };
+    
 // clang-format off
 template<typename type, typename return_type>
 concept promise = requires(type t)
 {
-    { t.get_return_object() } -> std::convertible_to<std::coroutine_handle<>>;
+    { t.get_return_object() } -> convertible_to<std::coroutine_handle<>>;
     { t.initial_suspend() } -> awaiter;
     { t.final_suspend() } -> awaiter;
     { t.yield_value() } -> awaitable;

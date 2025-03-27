@@ -3,7 +3,7 @@
 #include <atomic>
 #include <cstring>
 #include <optional>
-#include <sys/epoll.h>
+// #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/socket.h>
 #include <sys/timerfd.h>
@@ -50,7 +50,10 @@ auto io_scheduler::make_shared(options opts) -> std::shared_ptr<io_scheduler>
 
     if (s->m_opts.thread_strategy == thread_strategy_t::spawn)
     {
-        s->m_io_thread = std::thread([s]() { s->process_events_dedicated_thread(); });
+        // s->m_io_thread = std::thread([s]() { s->process_events_dedicated_thread(); });
+
+        s->m_io_thread = std::make_shared<thread_proxy>();
+        s->m_io_thread->start([s]() { s->process_events_dedicated_thread(); });
     }
     // else manual mode, the user must call process_events.
 
@@ -61,9 +64,9 @@ io_scheduler::~io_scheduler()
 {
     shutdown();
 
-    if (m_io_thread.joinable())
+    if (m_io_thread->joinable())
     {
-        m_io_thread.join();
+        m_io_thread->join();
     }
 
     if (m_epoll_fd != -1)
@@ -186,7 +189,7 @@ auto io_scheduler::poll(fd_t fd, coro::poll_op op, std::chrono::milliseconds tim
     e.data.ptr = &pi;
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &e) == -1)
     {
-        std::cerr << "epoll ctl error on fd " << fd << "\n";
+        // std::cerr << "epoll ctl error on fd " << fd << " op " << (uint64_t)op << " err " << errno << "\n";
     }
 
     // The event loop will 'clean-up' whichever event didn't win since the coroutine is scheduled
@@ -212,9 +215,9 @@ auto io_scheduler::shutdown() noexcept -> void
         auto     written = ::write(m_shutdown_fd, &value, sizeof(value));
         (void)written;
 
-        if (m_io_thread.joinable())
+        if (m_io_thread->joinable())
         {
-            m_io_thread.join();
+            m_io_thread->join();
         }
     }
 }
@@ -497,7 +500,7 @@ auto io_scheduler::update_timeout(time_point now) -> void
 
         if (timerfd_settime(m_timer_fd, 0, &ts, nullptr) == -1)
         {
-            std::cerr << "Failed to set timerfd errorno=[" << std::string{strerror(errno)} << "].";
+            // std::cerr << "Failed to set timerfd errorno=[" << std::string{strerror(errno)} << "].";
         }
     }
     else
@@ -508,9 +511,50 @@ auto io_scheduler::update_timeout(time_point now) -> void
         ts.it_value.tv_nsec = 0;
         if (timerfd_settime(m_timer_fd, 0, &ts, nullptr) == -1)
         {
-            std::cerr << "Failed to set timerfd errorno=[" << std::string{strerror(errno)} << "].";
+            // std::cerr << "Failed to set timerfd errorno=[" << std::string{strerror(errno)} << "].";
         }
     }
 }
 
 } // namespace coro
+
+int eventfd(unsigned int, int) __THROW
+{
+    return 0;
+}
+
+// /* Read event counter and possibly wait for events.  */
+extern int eventfd_read(int, eventfd_t*)
+{
+    return 0;
+}
+
+// /* Increment event counter.  */
+extern int eventfd_write(int, eventfd_t)
+{
+    return 0;
+}
+
+int timerfd_create(__clockid_t, int) __THROW
+{
+    return 0;
+}
+
+int timerfd_settime(int, int, const struct itimerspec*, struct itimerspec*) __THROW
+{
+    return 0;
+}
+
+namespace std
+{
+inline namespace __1
+{
+namespace chrono
+{
+steady_clock::time_point steady_clock::now() noexcept
+{
+    return steady_clock::time_point{};
+}
+} // namespace chrono
+} // namespace __1
+} // namespace std

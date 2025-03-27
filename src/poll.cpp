@@ -47,3 +47,30 @@ auto to_string(poll_status status) -> const std::string&
 }
 
 } // namespace coro
+
+int epoll_create1(int)
+{
+    return -1;
+}
+
+int epoll_ctl(int, int, int, struct epoll_event*)
+{
+    return -1;
+}
+
+int close(int)
+{
+    return -1;
+}
+
+ssize_t write(int, const void*, size_t)
+{
+    return -1;
+}
+
+int epoll_wait(int , struct epoll_event*, int, int)
+{
+    return -1;
+}
+
+// epoll_event __EPOLL_PACKED;

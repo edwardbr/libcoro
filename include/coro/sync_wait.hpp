@@ -1,5 +1,7 @@
 #pragma once
 
+#include "/home/edward/projects/rpc/rpc/include/rpc/coroutine_enclave/enclave_fix.h"
+
 #include "coro/attribute.hpp"
 #include "coro/concepts/awaitable.hpp"
 
@@ -50,11 +52,15 @@ public:
 
     auto initial_suspend() noexcept -> std::suspend_always { return {}; }
 
-    auto unhandled_exception() -> void { m_exception = std::current_exception(); }
+    auto unhandled_exception() -> void { 
+        // m_exception = std::current_exception(); 
+        exception_has_occurred = true;
+        }
 
 protected:
     sync_wait_event*   m_event{nullptr};
-    std::exception_ptr m_exception;
+    // rpc::exception_ptr m_exception;
+    bool exception_has_occurred{false};
 
     ~sync_wait_task_promise_base() = default;
 };
@@ -70,7 +76,7 @@ public:
         return_type_is_reference,
         std::remove_reference_t<return_type>*,
         std::remove_const_t<return_type>>;
-    using variant_type = std::variant<unset_return_value, stored_type, std::exception_ptr>;
+    using variant_type = std::variant<unset_return_value, stored_type, rpc::exception_ptr>;
 
     sync_wait_task_promise() noexcept                                        = default;
     sync_wait_task_promise(const sync_wait_task_promise&)                    = delete;
@@ -140,9 +146,10 @@ public:
                 return static_cast<const return_type&>(std::get<stored_type>(m_storage));
             }
         }
-        else if (std::holds_alternative<std::exception_ptr>(m_storage))
+        else if (std::holds_alternative<rpc::exception_ptr>(m_storage))
         {
-            std::rethrow_exception(std::get<std::exception_ptr>(m_storage));
+            // std::rethrow_exception(std::get<rpc::exception_ptr>(m_storage));
+            throw std::bad_exception();
         }
         else
         {
@@ -163,10 +170,10 @@ public:
                 return static_cast<const return_type&>(std::get<stored_type>(m_storage));
             }
         }
-        else if (std::holds_alternative<std::exception_ptr>(m_storage))
+        else if (std::holds_alternative<rpc::exception_ptr>(m_storage))
         {
-            std::rethrow_exception(std::get<std::exception_ptr>(m_storage));
-        }
+            // std::rethrow_exception(std::get<rpc::exception_ptr>(m_storage));
+            throw std::bad_exception();        }
         else
         {
             throw std::runtime_error{"The return value was never set, did you execute the coroutine?"};
@@ -190,10 +197,10 @@ public:
                 return static_cast<const return_type&&>(std::get<stored_type>(m_storage));
             }
         }
-        else if (std::holds_alternative<std::exception_ptr>(m_storage))
+        else if (std::holds_alternative<rpc::exception_ptr>(m_storage))
         {
-            std::rethrow_exception(std::get<std::exception_ptr>(m_storage));
-        }
+            // std::rethrow_exception(std::get<rpc::exception_ptr>(m_storage));
+            throw std::bad_exception();        }
         else
         {
             throw std::runtime_error{"The return value was never set, did you execute the coroutine?"};
@@ -237,9 +244,14 @@ public:
 
     auto result() -> void
     {
-        if (m_exception)
+        if (exception_has_occurred
+        //m_exception
+        )
         {
-            std::rethrow_exception(m_exception);
+            exception_has_occurred = true;
+            throw std::bad_exception();
+            
+            // std::rethrow_exception(m_exception);
         }
     }
 };

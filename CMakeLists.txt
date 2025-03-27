@@ -50,9 +50,9 @@ message("${PROJECT_NAME} LIBCORO_RUN_GITCONFIG         = ${LIBCORO_RUN_GITCONFIG
 message("${PROJECT_NAME} LIBCORO_BUILD_SHARED_LIBS     = ${LIBCORO_BUILD_SHARED_LIBS}")
 
 if(LIBCORO_EXTERNAL_DEPENDENCIES)
-    if(LIBCORO_FEATURE_NETWORKING)
-        find_package(c-ares CONFIG REQUIRED)
-    endif()
+    # if(LIBCORO_FEATURE_NETWORKING)
+    #     find_package(c-ares CONFIG REQUIRED)
+    # endif()
 else()
     if(NOT LIBCORO_BUILD_TESTS)
         # Disable testing in expected
@@ -62,7 +62,7 @@ else()
         set(CARES_STATIC    $<NOT:${LIBCORO_BUILD_SHARED_LIBS}> CACHE INTERNAL "")
         set(CARES_SHARED    ${LIBCORO_BUILD_SHARED_LIBS} CACHE INTERNAL "")
         set(CARES_INSTALL   OFF CACHE INTERNAL "")
-        add_subdirectory(vendor/c-ares/c-ares)
+        # add_subdirectory(vendor/c-ares/c-ares)
     endif()
 endif()
 
@@ -105,18 +105,18 @@ if(LIBCORO_FEATURE_NETWORKING)
         include/coro/poll.hpp src/poll.cpp
     )
 
-    list(APPEND LIBCORO_SOURCE_FILES
-        include/coro/net/dns/resolver.hpp src/net/dns/resolver.cpp
-        include/coro/net/connect.hpp src/net/connect.cpp
-        include/coro/net/hostname.hpp
-        include/coro/net/ip_address.hpp src/net/ip_address.cpp
-        include/coro/net/recv_status.hpp src/net/recv_status.cpp
-        include/coro/net/send_status.hpp src/net/send_status.cpp
-        include/coro/net/socket.hpp src/net/socket.cpp
-        include/coro/net/tcp/client.hpp src/net/tcp/client.cpp
-        include/coro/net/tcp/server.hpp src/net/tcp/server.cpp
-        include/coro/net/udp/peer.hpp src/net/udp/peer.cpp
-    )
+    # list(APPEND LIBCORO_SOURCE_FILES
+    #     include/coro/net/dns/resolver.hpp src/net/dns/resolver.cpp
+    #     include/coro/net/connect.hpp src/net/connect.cpp
+    #     include/coro/net/hostname.hpp
+    #     include/coro/net/ip_address.hpp src/net/ip_address.cpp
+    #     include/coro/net/recv_status.hpp src/net/recv_status.cpp
+    #     include/coro/net/send_status.hpp src/net/send_status.cpp
+    #     include/coro/net/socket.hpp src/net/socket.cpp
+    #     include/coro/net/tcp/client.hpp src/net/tcp/client.cpp
+    #     include/coro/net/tcp/server.hpp src/net/tcp/server.cpp
+    #     include/coro/net/udp/peer.hpp src/net/udp/peer.cpp
+    # )
 
     if(LIBCORO_FEATURE_TLS)
         find_package(OpenSSL REQUIRED)
@@ -149,12 +149,30 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
 generate_export_header(${PROJECT_NAME} BASE_NAME CORO EXPORT_FILE_NAME include/coro/export.hpp)
 
+add_library(${PROJECT_NAME}_enclave ${LIBCORO_SOURCE_FILES})
+set_target_properties(${PROJECT_NAME}_enclave PROPERTIES LINKER_LANGUAGE CXX PREFIX "" VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR})
+target_compile_features(${PROJECT_NAME}_enclave PUBLIC cxx_std_20)
+target_include_directories(${PROJECT_NAME}_enclave PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include PRIVATE ${ENCLAVE_LIBCXX_INCLUDES})
+generate_export_header(${PROJECT_NAME}_enclave BASE_NAME CORO EXPORT_FILE_NAME include/coro/export.hpp)
+target_link_libraries(${PROJECT_NAME}_enclave PUBLIC range-v3 rpc_enclave)
+target_compile_definitions(${PROJECT_NAME}_enclave PRIVATE ${ENCLAVE_DEFINES})
+target_compile_options(${PROJECT_NAME}_enclave PRIVATE ${ENCLAVE_COMPILE_OPTIONS} 
+${WARN_OK}
+)
+target_link_options(${PROJECT_NAME}_enclave PRIVATE ${ENCLAVE_LINK_OPTIONS})
+set_property(TARGET ${PROJECT_NAME}_enclave PROPERTY COMPILE_PDB_NAME ${PROJECT_NAME}_enclave)
+if(ENABLE_CLANG_TIDY)
+set_target_properties(${PROJECT_NAME}_enclave PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
+endif()
+add_library(rpc::${PROJECT_NAME}_enclave ALIAS ${PROJECT_NAME}_enclave)
+
+
 if(UNIX)
     target_link_libraries(${PROJECT_NAME} PUBLIC pthread)
 endif()
 
 if(LIBCORO_FEATURE_NETWORKING)
-    target_link_libraries(${PROJECT_NAME} PUBLIC c-ares::cares)
+    # target_link_libraries(${PROJECT_NAME} PUBLIC c-ares::cares)
     target_compile_definitions(${PROJECT_NAME} PUBLIC LIBCORO_FEATURE_NETWORKING)
     if(LIBCORO_FEATURE_TLS)
         target_link_libraries(${PROJECT_NAME} PUBLIC OpenSSL::SSL OpenSSL::Crypto)

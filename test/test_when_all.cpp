@@ -140,7 +140,7 @@ TEST_CASE("when_all inside coroutine", "[when_all]")
     REQUIRE(result == (1 + 2 + 3));
 }
 
-TEST_CASE("when_all use std::ranges::view", "[when_all]")
+TEST_CASE("when_all use ranges::view", "[when_all]")
 {
     coro::thread_pool tp{};
 
@@ -157,7 +157,7 @@ TEST_CASE("when_all use std::ranges::view", "[when_all]")
         tasks.emplace_back(make_task(2));
         tasks.emplace_back(make_task(3));
 
-        auto output_tasks = co_await coro::when_all(std::ranges::views::all(tasks));
+        auto output_tasks = co_await coro::when_all(ranges::views::all(tasks));
 
         uint64_t result{0};
         for (const auto& task : output_tasks)

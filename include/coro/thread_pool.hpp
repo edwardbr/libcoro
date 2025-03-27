@@ -1,5 +1,8 @@
 #pragma once
 
+#include "/home/edward/projects/rpc/rpc/include/rpc/coroutine_enclave/enclave_fix.h"
+#include "/home/edward/projects/rpc/rpc/include/rpc/coroutine_enclave/thread_proxy.h"
+
 #include "coro/concepts/range_of.hpp"
 #include "coro/event.hpp"
 #include "coro/task.hpp"
@@ -70,7 +73,7 @@ public:
     {
         /// The number of executor threads for this thread pool.  Uses the hardware concurrency
         /// value by default.
-        uint32_t thread_count = std::thread::hardware_concurrency();
+        uint32_t thread_count = 2;
         /// Functor to call on each executor thread upon starting execution.  The parameter is the
         /// thread's ID assigned to it by the thread pool.
         std::function<void(std::size_t)> on_thread_start_functor = nullptr;
@@ -84,7 +87,7 @@ public:
      */
     explicit thread_pool(
         options opts = options{
-            .thread_count            = std::thread::hardware_concurrency(),
+            .thread_count            = 2,
             .on_thread_start_functor = nullptr,
             .on_thread_stop_functor  = nullptr});
 
@@ -229,7 +232,7 @@ private:
     /// The configuration options.
     options m_opts;
     /// The background executor threads.
-    std::vector<std::thread> m_threads;
+    std::vector<std::shared_ptr<thread_proxy>> m_threads;
     /// Mutex for executor threads to sleep on the condition variable.
     std::mutex m_wait_mutex;
     /// Condition variable for each executor thread to wait on when no tasks are available.

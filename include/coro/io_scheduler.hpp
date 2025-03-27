@@ -1,5 +1,7 @@
 #pragma once
 
+#include "/home/edward/projects/rpc/rpc/include/rpc/coroutine_enclave/enclave_fix.h"
+
 #include "coro/detail/poll_info.hpp"
 #include "coro/fd.hpp"
 #include "coro/poll.hpp"
@@ -18,6 +20,8 @@
 #include <sys/eventfd.h>
 #include <thread>
 #include <vector>
+
+#include "/home/edward/projects/rpc/rpc/include/rpc/coroutine_enclave/thread_proxy.h"
 
 namespace coro
 {
@@ -330,7 +334,8 @@ private:
     std::atomic<std::size_t> m_size{0};
 
     /// The background io worker threads.
-    std::thread m_io_thread;
+    // std::thread m_io_thread;
+    std::shared_ptr<thread_proxy> m_io_thread;
     /// Thread pool for executing tasks when not in inline mode.
     std::unique_ptr<thread_pool> m_thread_pool{nullptr};
 

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <atomic>
-#include <coroutine>
+#include "/home/edward/projects/rpc/rpc/include/rpc/coroutine_enclave/enclave_fix.h"
+#include "/home/edward/projects/rpc/rpc/include/rpc/coroutine_enclave/coroutine.h"
+// #include <coroutine>
 #include <cstdint>
 
 namespace coro::detail

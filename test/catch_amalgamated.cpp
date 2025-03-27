@@ -5755,7 +5755,7 @@ namespace Catch {
 
 namespace Catch {
 #if !defined(CATCH_CONFIG_DISABLE_EXCEPTIONS)
-    void StartupExceptionRegistry::add( std::exception_ptr const& exception ) noexcept {
+    void StartupExceptionRegistry::add( rpc::exception_ptr const& exception ) noexcept {
         CATCH_TRY {
             m_exceptions.push_back(exception);
         } CATCH_CATCH_ALL {
@@ -5764,7 +5764,7 @@ namespace Catch {
         }
     }
 
-    std::vector<std::exception_ptr> const& StartupExceptionRegistry::getExceptions() const noexcept {
+    std::vector<rpc::exception_ptr> const& StartupExceptionRegistry::getExceptions() const noexcept {
         return m_exceptions;
     }
 #endif

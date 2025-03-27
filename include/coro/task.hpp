@@ -75,7 +75,7 @@ public:
         return_type_is_reference,
         std::remove_reference_t<return_type>*,
         std::remove_const_t<return_type>>;
-    using variant_type = std::variant<unset_return_value, stored_type, std::exception_ptr>;
+    using variant_type = std::variant<unset_return_value, stored_type, rpc::exception_ptr>;
 
     promise() noexcept {}
     promise(const promise&)             = delete;
@@ -114,7 +114,10 @@ public:
         }
     }
 
-    auto unhandled_exception() noexcept -> void { new (&m_storage) variant_type(std::current_exception()); }
+    auto unhandled_exception() noexcept -> void { 
+        //new (&m_storage) variant_type(std::current_exception()); 
+        new (&m_storage) variant_type(rpc::exception_ptr()); 
+        }
 
     auto result() & -> decltype(auto)
     {
@@ -129,10 +132,10 @@ public:
                 return static_cast<const return_type&>(std::get<stored_type>(m_storage));
             }
         }
-        else if (std::holds_alternative<std::exception_ptr>(m_storage))
+        else if (std::holds_alternative<rpc::exception_ptr>(m_storage))
         {
-            std::rethrow_exception(std::get<std::exception_ptr>(m_storage));
-        }
+            // std::rethrow_exception(std::get<rpc::exception_ptr>(m_storage));
+            throw std::bad_exception();        }
         else
         {
             throw std::runtime_error{"The return value was never set, did you execute the coroutine?"};
@@ -152,10 +155,10 @@ public:
                 return static_cast<const return_type&>(std::get<stored_type>(m_storage));
             }
         }
-        else if (std::holds_alternative<std::exception_ptr>(m_storage))
+        else if (std::holds_alternative<rpc::exception_ptr>(m_storage))
         {
-            std::rethrow_exception(std::get<std::exception_ptr>(m_storage));
-        }
+            // std::rethrow_exception(std::get<rpc::exception_ptr>(m_storage));
+            throw std::bad_exception();        }
         else
         {
             throw std::runtime_error{"The return value was never set, did you execute the coroutine?"};
@@ -179,9 +182,10 @@ public:
                 return static_cast<const return_type&&>(std::get<stored_type>(m_storage));
             }
         }
-        else if (std::holds_alternative<std::exception_ptr>(m_storage))
+        else if (std::holds_alternative<rpc::exception_ptr>(m_storage))
         {
-            std::rethrow_exception(std::get<std::exception_ptr>(m_storage));
+            // std::rethrow_exception(std::get<rpc::exception_ptr>(m_storage));
+            throw std::bad_exception();        
         }
         else
         {
@@ -210,18 +214,25 @@ struct promise<void> : public promise_base
 
     auto return_void() noexcept -> void {}
 
-    auto unhandled_exception() noexcept -> void { m_exception_ptr = std::current_exception(); }
+    auto unhandled_exception() noexcept -> void { 
+        // m_exception_ptr = std::current_exception(); 
+        exception_has_occurred = true;
+        }
 
     auto result() -> void
     {
-        if (m_exception_ptr)
+        if (exception_has_occurred
+        //m_exception_ptr
+        )
         {
-            std::rethrow_exception(m_exception_ptr);
+            // std::rethrow_exception(std::get<rpc::exception_ptr>(m_storage));
+            throw std::bad_exception();
         }
     }
 
 private:
-    std::exception_ptr m_exception_ptr{nullptr};
+    // rpc::exception_ptr m_exception_ptr{nullptr};
+    bool exception_has_occurred{false};
 };
 
 } // namespace detail
