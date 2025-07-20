@@ -6,8 +6,9 @@ project(libcoro
     DESCRIPTION "C++20 coroutine library"
 )
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(MACOSX TRUE)
+
     # We need to build with clang >= 17, assuming its installed by
     # brew. We also need to force linking to libc++.a
     add_link_options(-L/usr/local/opt/llvm/lib)
@@ -17,19 +18,19 @@ endif()
 include(GNUInstallDirs)
 include(GenerateExportHeader)
 
-if (NOT "$ENV{version}" STREQUAL "")
+if(NOT "$ENV{version}" STREQUAL "")
     set(PROJECT_VERSION "$ENV{version}" CACHE INTERNAL "Copied from environment variable")
 endif()
 
-option(LIBCORO_EXTERNAL_DEPENDENCIES "Use Cmake find_package to resolve dependencies instead of embedded libraries, Default=OFF." OFF)
-option(LIBCORO_BUILD_TESTS           "Build the tests, Default=ON." ON)
-option(LIBCORO_CODE_COVERAGE         "Enable code coverage, tests must also be enabled, Default=OFF" OFF)
-option(LIBCORO_BUILD_EXAMPLES        "Build the examples, Default=ON." ON)
-option(LIBCORO_RUN_GITCONFIG         "Set the githooks directory to auto format and update the readme, Default=OFF." OFF)
-option(LIBCORO_BUILD_SHARED_LIBS     "Build shared libraries, Default=OFF." OFF)
+option(LIBCORO_EXTERNAL_DEPENDENCIES "Use Cmake find_package to resolve dependencies instead of embedded libraries, Default=OFF." O)
+option(LIBCORO_BUILD_TESTS "Build the tests, Default=ON." ON)
+option(LIBCORO_CODE_COVERAGE "Enable code coverage, tests must also be enabled, Default=OFF" OFF)
+option(LIBCORO_BUILD_EXAMPLES "Build the examples, Default=ON." ON)
+option(LIBCORO_RUN_GITCONFIG "Set the githooks directory to auto format and update the readme, Default=OFF." OFF)
+option(LIBCORO_BUILD_SHARED_LIBS "Build shared libraries, Default=OFF." OFF)
 
 # Set the githooks directory to auto format and update the readme.
-if (LIBCORO_RUN_GITCONFIG)
+if(LIBCORO_RUN_GITCONFIG)
     message("${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} -> git config --local core.hooksPath .githooks")
     execute_process(
         COMMAND git config --local core.hooksPath .githooks
@@ -54,16 +55,17 @@ if(LIBCORO_EXTERNAL_DEPENDENCIES)
         find_package(c-ares CONFIG REQUIRED)
     endif()
 else()
-    if(NOT LIBCORO_BUILD_TESTS)
-        # Disable testing in expected
-        set(BUILD_TESTING OFF CACHE INTERNAL "")
-    endif()
-    if(LIBCORO_FEATURE_NETWORKING)
-        set(CARES_STATIC    $<NOT:${LIBCORO_BUILD_SHARED_LIBS}> CACHE INTERNAL "")
-        set(CARES_SHARED    ${LIBCORO_BUILD_SHARED_LIBS} CACHE INTERNAL "")
-        set(CARES_INSTALL   OFF CACHE INTERNAL "")
-        add_subdirectory(vendor/c-ares/c-ares)
-    endif()
+    # if(NOT LIBCORO_BUILD_TESTS)
+    #     # Disable testing in expected
+    #     set(BUILD_TESTING OFF CACHE INTERNAL "")
+    # endif()
+
+    # if(LIBCORO_FEATURE_NETWORKING)
+    #     set(CARES_STATIC $<NOT:${LIBCORO_BUILD_SHARED_LIBS}> CACHE INTERNAL "")
+    #     set(CARES_SHARED ${LIBCORO_BUILD_SHARED_LIBS} CACHE INTERNAL "")
+    #     set(CARES_INSTALL OFF CACHE INTERNAL "")
+    #     add_subdirectory(vendor/c-ares/c-ares)
+    # endif()
 endif()
 
 set(BUILD_SHARED_LIBS ${LIBCORO_BUILD_SHARED_LIBS} CACHE INTERNAL "")
@@ -149,6 +151,27 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
 generate_export_header(${PROJECT_NAME} BASE_NAME CORO EXPORT_FILE_NAME include/coro/export.hpp)
 
+if(BUILD_ENCLAVE)
+    add_library(${PROJECT_NAME}_enclave ${LIBCORO_SOURCE_FILES})
+    set_target_properties(${PROJECT_NAME}_enclave PROPERTIES LINKER_LANGUAGE CXX PREFIX "" VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR})
+    target_compile_features(${PROJECT_NAME}_enclave PUBLIC cxx_std_20)
+    target_include_directories(${PROJECT_NAME}_enclave PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include PRIVATE ${ENCLAVE_LIBCXX_INCLUDES})
+    generate_export_header(${PROJECT_NAME}_enclave BASE_NAME CORO EXPORT_FILE_NAME include/coro/export.hpp)
+    target_link_libraries(${PROJECT_NAME}_enclave PUBLIC range-v3 rpc_enclave)
+    target_compile_definitions(${PROJECT_NAME}_enclave PRIVATE ${ENCLAVE_DEFINES})
+    target_compile_options(${PROJECT_NAME}_enclave PRIVATE ${ENCLAVE_COMPILE_OPTIONS}
+        ${WARN_OK}
+    )
+    target_link_options(${PROJECT_NAME}_enclave PRIVATE ${ENCLAVE_LINK_OPTIONS})
+    set_property(TARGET ${PROJECT_NAME}_enclave PROPERTY COMPILE_PDB_NAME ${PROJECT_NAME}_enclave)
+
+    if(ENABLE_CLANG_TIDY)
+        set_target_properties(${PROJECT_NAME}_enclave PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
+    endif()
+
+    add_library(rpc::${PROJECT_NAME}_enclave ALIAS ${PROJECT_NAME}_enclave)
+endif()
+
 if(UNIX)
     target_link_libraries(${PROJECT_NAME} PUBLIC pthread)
 endif()
@@ -156,6 +179,7 @@ endif()
 if(LIBCORO_FEATURE_NETWORKING)
     target_link_libraries(${PROJECT_NAME} PUBLIC c-ares::cares)
     target_compile_definitions(${PROJECT_NAME} PUBLIC LIBCORO_FEATURE_NETWORKING)
+
     if(LIBCORO_FEATURE_TLS)
         target_link_libraries(${PROJECT_NAME} PUBLIC OpenSSL::SSL OpenSSL::Crypto)
         target_compile_definitions(${PROJECT_NAME} PUBLIC LIBCORO_FEATURE_TLS)
@@ -206,13 +230,13 @@ if(LIBCORO_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
-
 # generate pc file for pkg-config
 if(MSVC)
     set(target1 ${PROJECT_NAME})
 else()
     string(REGEX REPLACE "^lib" "" target1 ${PROJECT_NAME})
 endif()
+
 configure_file(libcoro.pc.in libcoro.pc @ONLY)
 
 install(TARGETS libcoro)
