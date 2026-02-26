@@ -18,7 +18,19 @@ client::client(std::unique_ptr<coro::scheduler>& scheduler, net::socket_address 
     }
 }
 
-client::client(coro::scheduler* scheduler, net::socket socket, const net::socket_address &endpoint)
+client::client(std::shared_ptr<coro::scheduler>& scheduler, net::socket_address endpoint)
+    : m_scheduler(scheduler.get()),
+      m_endpoint(std::move(endpoint)),
+      m_socket(
+          net::make_socket(net::socket::options{socket::type_t::tcp, net::socket::blocking_t::no}, endpoint.domain()))
+{
+    if (m_scheduler == nullptr)
+    {
+        throw std::runtime_error{"tcp::client cannot have nullptr scheduler"};
+    }
+}
+
+client::client(coro::scheduler* scheduler, net::socket socket, const net::socket_address& endpoint)
     : m_scheduler(scheduler),
       m_endpoint(std::move(endpoint)),
       m_socket(std::move(socket)),
@@ -54,7 +66,7 @@ auto client::operator=(const client& other) noexcept -> client&
 {
     if (std::addressof(other) != this)
     {
-        m_scheduler   = other.m_scheduler;
+        m_scheduler      = other.m_scheduler;
         m_endpoint       = other.m_endpoint;
         m_socket         = other.m_socket;
         m_connect_status = other.m_connect_status;
@@ -66,7 +78,7 @@ auto client::operator=(client&& other) noexcept -> client&
 {
     if (std::addressof(other) != this)
     {
-        m_scheduler   = std::exchange(other.m_scheduler, nullptr);
+        m_scheduler      = std::exchange(other.m_scheduler, nullptr);
         m_endpoint       = std::move(other.m_endpoint);
         m_socket         = std::move(other.m_socket);
         m_connect_status = std::exchange(other.m_connect_status, std::nullopt);

@@ -33,6 +33,13 @@ public:
 
             .backlog = 128,
         });
+    explicit server(
+        std::shared_ptr<coro::scheduler>& scheduler,
+        const net::socket_address&        endpoint,
+        options                           opts = options{
+
+            .backlog = 128,
+        });
 
     server(const server&) = delete;
     server(server&& other);

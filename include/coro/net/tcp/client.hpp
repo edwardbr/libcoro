@@ -27,6 +27,7 @@ public:
      * @param opts See client::options for more information.
      */
     explicit client(std::unique_ptr<coro::scheduler>& scheduler, net::socket_address endpoint);
+    explicit client(std::shared_ptr<coro::scheduler>& scheduler, net::socket_address endpoint);
     client(const client& other);
     client(client&& other) noexcept;
     auto operator=(const client& other) noexcept -> client&;
