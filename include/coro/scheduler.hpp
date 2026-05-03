@@ -302,6 +302,7 @@ public:
         {
             if constexpr (std::is_void_v<return_type>)
             {
+                co_await schedule(std::move(task));
                 co_return coro::expected<return_type, timeout_status>();
             }
             else
